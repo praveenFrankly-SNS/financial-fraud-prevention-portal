@@ -55,9 +55,9 @@ class ModelServingService:
                 headers=self._headers(),
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=35) as resp:
                 res = json.loads(resp.read().decode())
-            print(f"[MODEL SERVING SUCCESS] Databricks Response received")
+            print(f"[MODEL SERVING SUCCESS] Databricks Response received: {res}")
             return {"status": "success", "predictions": res.get("predictions", res)}
         except urllib.error.HTTPError as e:
             err_body = e.read().decode()
@@ -133,10 +133,14 @@ class ModelServingService:
                 "processing_time_ms": elapsed_ms,
             }
 
+        pred = predictions[0]
         try:
-            raw_score = float(predictions[0])
+            if isinstance(pred, dict):
+                raw_score = float(pred.get("fraud_probability", pred.get("score", pred.get("prediction", 0.0))))
+            else:
+                raw_score = float(pred)
         except (TypeError, ValueError):
-            logger.error("Invalid prediction returned by Databricks: %s", predictions[0])
+            logger.error("Invalid prediction returned by Databricks: %s", pred)
             return {
                 "status": "error",
                 "error_type": "INVALID_MODEL_RESPONSE",

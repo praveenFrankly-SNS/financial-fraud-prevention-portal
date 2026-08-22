@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, XCircle, ArrowRight, Home } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, ArrowRight, Home, ShieldCheck } from 'lucide-react';
 import { submitTransaction } from '../services/api';
 import { formatINR } from '../data/accounts';
 import { saveTransaction } from '../data/transactions';
@@ -185,19 +185,50 @@ export default function Processing() {
                 ))}
               </div>
 
-              {/* Neutral loading message */}
+              {/* Neutral loading message with High-Tech Security Radar Scan */}
               <div style={{
                 background: 'var(--color-surface-alt)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-5)',
+                padding: 'var(--space-6) var(--space-4)',
                 textAlign: 'center',
               }}>
-                <div className="spinner-ring" style={{ margin: '0 auto var(--space-3)' }} />
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Almost there...</div>
+                <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{
+                    position: 'absolute',
+                    inset: -6,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, transparent 70%)',
+                    animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                  }} />
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '50%',
+                    border: '3px solid transparent',
+                    borderTopColor: '#2563eb',
+                    borderRightColor: '#7c3aed',
+                    borderBottomColor: '#06b6d4',
+                    animation: 'spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite',
+                  }} />
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                    zIndex: 2,
+                  }}>
+                    <ShieldCheck size={20} color="#ffffff" />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: 'var(--color-text-primary)' }}>Evaluating Transaction Security...</div>
                 <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                  We are securely reviewing your transaction.
-                  This usually takes only a few seconds.
+                  We are verifying real-time fraud signals via Databricks Model Serving.
                 </div>
               </div>
             </>
