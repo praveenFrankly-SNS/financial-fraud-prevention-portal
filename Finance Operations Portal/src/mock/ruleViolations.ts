@@ -1,0 +1,98 @@
+import type { RuleViolation } from '../types';
+
+export const ruleViolations: RuleViolation[] = [
+  {
+    id: 'RV-20250519-0001', ruleName: 'High Velocity', severity: 'HIGH',
+    category: 'Velocity', triggeredBy: 'Transaction', count: 482,
+    firstOccurred: 'May 19, 10:42:31 AM', lastOccurred: 'May 19, 10:42:31 AM',
+    status: 'Active', blockPct: 94, hitlPct: 4,
+    description: 'Transaction velocity exceeds safe threshold in short time window.',
+    condition: 'Transactions > 5 within 60 seconds',
+    threshold: '5 txns / 60s',
+  },
+  {
+    id: 'RV-20250519-0002', ruleName: 'High Risk Country', severity: 'HIGH',
+    category: 'Geo-Location', triggeredBy: 'Transaction', count: 312,
+    firstOccurred: 'May 19, 10:41:22 AM', lastOccurred: 'May 19, 10:41:22 AM',
+    status: 'Active', blockPct: 88, hitlPct: 10,
+    description: 'Transaction originates from a country on the high-risk watchlist.',
+    condition: 'Country in {NG, RU, KP, IR, BY}',
+    threshold: 'Blocked country list',
+  },
+  {
+    id: 'RV-20250519-0003', ruleName: 'Device Fingerprint Mismatch', severity: 'MEDIUM',
+    category: 'Device', triggeredBy: 'Transaction', count: 198,
+    firstOccurred: 'May 19, 10:40:15 AM', lastOccurred: 'May 19, 10:40:15 AM',
+    status: 'Active', blockPct: 62, hitlPct: 28,
+    description: 'Transaction device not previously seen for this customer.',
+    condition: 'Device ID not in customer device history',
+    threshold: 'First device use',
+  },
+  {
+    id: 'RV-20250519-0004', ruleName: 'Card Not Present – High Amount', severity: 'MEDIUM',
+    category: 'Payment', triggeredBy: 'Transaction', count: 148,
+    firstOccurred: 'May 19, 10:39:08 AM', lastOccurred: 'May 19, 10:39:08 AM',
+    status: 'Active', blockPct: 55, hitlPct: 35,
+    description: 'Card-not-present payment above high-amount threshold.',
+    condition: 'channel=Online AND amount > $2,000',
+    threshold: '$2,000',
+  },
+  {
+    id: 'RV-20250519-0005', ruleName: 'Amount Deviation', severity: 'MEDIUM',
+    category: 'Behavior', triggeredBy: 'Transaction', count: 108,
+    firstOccurred: 'May 19, 10:38:55 AM', lastOccurred: 'May 19, 10:38:55 AM',
+    status: 'Active', blockPct: 48, hitlPct: 40,
+    description: 'Amount deviates significantly from customer average.',
+    condition: 'Amount > 3x customer 30-day average',
+    threshold: '3× avg',
+  },
+  {
+    id: 'RV-20250519-0006', ruleName: 'Multiple Failed Authentications', severity: 'HIGH',
+    category: 'Authentication', triggeredBy: 'Customer', count: 96,
+    firstOccurred: 'May 19, 10:37:42 AM', lastOccurred: 'May 19, 10:37:42 AM',
+    status: 'Active', blockPct: 90, hitlPct: 7,
+    description: 'Multiple failed authentication attempts before successful transaction.',
+    condition: 'Failed logins > 3 in last 10 minutes',
+    threshold: '3 failures / 10m',
+  },
+  {
+    id: 'RV-20250519-0007', ruleName: 'Suspicious Login Pattern', severity: 'LOW',
+    category: 'Behavior', triggeredBy: 'User', count: 74,
+    firstOccurred: 'May 19, 10:36:10 AM', lastOccurred: 'May 19, 10:36:10 AM',
+    status: 'Resolved', blockPct: 30, hitlPct: 50,
+    description: 'Login patterns inconsistent with customer historical behavior.',
+    condition: 'Login time or location anomaly',
+    threshold: 'Anomaly score > 0.6',
+  },
+  {
+    id: 'RV-20250519-0008', ruleName: 'New Device', severity: 'LOW',
+    category: 'Device', triggeredBy: 'Customer', count: 64,
+    firstOccurred: 'May 19, 10:35:01 AM', lastOccurred: 'May 19, 10:35:01 AM',
+    status: 'Active', blockPct: 20, hitlPct: 60,
+    description: 'Transaction initiated from a brand new device not previously registered.',
+    condition: 'First time seeing device for customer',
+    threshold: 'New device',
+  },
+];
+
+export const ruleViolationKpis = {
+  total: 3842,
+  high: 1248,
+  medium: 1864,
+  low: 730,
+  uniqueRules: 23,
+  totalTrend: 18.7,
+  highTrend: 21.3,
+  mediumTrend: 14.2,
+  lowTrend: -8.1,
+  uniqueRulesTrend: 9.5,
+};
+
+export const violationsByCategory = [
+  { category: 'Velocity', count: 1012, pct: 26.3 },
+  { category: 'Geo-Location', count: 876, pct: 22.8 },
+  { category: 'Device', count: 654, pct: 17.0 },
+  { category: 'Payment', count: 512, pct: 13.3 },
+  { category: 'Authentication', count: 432, pct: 11.2 },
+  { category: 'Behavior', count: 356, pct: 9.3 },
+];
