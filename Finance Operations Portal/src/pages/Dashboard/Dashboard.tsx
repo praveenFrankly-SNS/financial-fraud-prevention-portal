@@ -109,32 +109,26 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Databricks Unity Catalog Connection Status Banner */}
-      <div style={{
-        padding: '12px 16px',
-        background: data?.databricksStatus?.connected ? '#f0fdf4' : '#fff1f2',
-        border: `1px solid ${data?.databricksStatus?.connected ? '#bbf7d0' : '#fecdd3'}`,
-        borderRadius: 8,
-        fontSize: 12.5,
-        color: data?.databricksStatus?.connected ? '#166534' : '#9f1239',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14 }}>
-            {data?.databricksStatus?.connected ? '🟢' : '🟡'}
-          </span>
+      {/* Databricks Connection Error Banner (Only shown IF connection fails) */}
+      {(data?.error || (data?.databricksStatus && !data.databricksStatus.connected)) && (
+        <div style={{
+          padding: '12px 16px',
+          background: '#fff1f2',
+          border: '1px solid #fecdd3',
+          borderRadius: 8,
+          fontSize: 12.5,
+          color: '#9f1239',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 20,
+        }}>
+          <span style={{ fontSize: 14 }}>❌</span>
           <div>
-            <strong>Databricks Source:</strong> {data?.databricksStatus?.table || 'fraud_prevention_dev.silver.transactions'} &nbsp;|&nbsp;
-            <span>{data?.databricksStatus?.message || 'Connecting to Databricks SQL Warehouse...'}</span>
+            <strong>Failed to connect to Databricks:</strong> {data?.databricksStatus?.message || data?.error || 'SQL Warehouse connection error.'}
           </div>
         </div>
-        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: 'white', border: '1px solid currentColor' }}>
-          {data?.databricksStatus?.count || 0} Records Processed
-        </span>
-      </div>
+      )}
 
       {/* KPI Cards */}
       <div className="kpi-grid" style={{ marginBottom: 24 }}>

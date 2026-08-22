@@ -6,7 +6,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 export async function apiGet<T>(path: string): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const timer = setTimeout(() => controller.abort(), 45000);
   try {
     const resp = await fetch(`${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`, {
       headers: { 'Content-Type': 'application/json' },
@@ -23,7 +23,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const timer = setTimeout(() => controller.abort(), 45000);
   try {
     const resp = await fetch(`${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`, {
       method: 'POST',

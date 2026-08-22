@@ -80,21 +80,20 @@ def record_live_transaction(payload: RecordTransactionPayload):
 
 
 def _map_transaction(r: Dict[str, Any]) -> Dict[str, Any]:
-    amount = float(r.get('amount') or 100.0)
+    amount = float(r.get('amount') or 0.0)
     tx_status = r.get('transaction_status', 'Approved')
 
-    # Deriving realistic risk score & decision mapping
-    if tx_status == 'Blocked' or amount > 2500:
+    if tx_status == 'Blocked' or tx_status == 'BLOCK':
         risk_score = round(min(0.99, 0.85 + (amount % 100) / 1000), 2)
         risk_level = 'High'
         decision = 'BLOCK'
-        status = 'Completed'
+        status = 'Declined'
         rules = ['High Velocity', 'Amount Deviation', 'Location Anomaly']
-    elif amount > 800:
+    elif tx_status == 'Pending' or tx_status == 'CHALLENGE':
         risk_score = round(0.50 + (amount % 100) / 400, 2)
         risk_level = 'Medium'
-        decision = 'CHALLENGE' if amount < 1500 else 'HITL'
-        status = 'HITL Pending' if decision == 'HITL' else 'Completed'
+        decision = 'CHALLENGE'
+        status = 'HITL Pending'
         rules = ['Amount Deviation', 'New Device']
     else:
         risk_score = round(max(0.01, (amount % 50) / 500), 2)
@@ -103,18 +102,23 @@ def _map_transaction(r: Dict[str, Any]) -> Dict[str, Any]:
         status = 'Completed'
         rules = []
 
-    tx_id = r.get('transaction_id', 'TX-0000')
-    cust_id = r.get('customer_id', 'C-1000')
+    raw_tx_id = str(r.get('transaction_id', '0'))
+    tx_id = f"TXN-{raw_tx_id}" if not raw_tx_id.startswith("TX") else raw_tx_id
+    raw_cust_id = str(r.get('customer_id', '1000'))
+    cust_id = f"CUST-{raw_cust_id}" if not raw_cust_id.startswith("C") else raw_cust_id
+
+    merchant_raw = str(r.get('merchant_id') or r.get('merchant') or 'M_100')
+    merchant_name = merchant_raw if not merchant_raw.startswith("M_") else f"Merchant {merchant_raw}"
 
     return {
-        "id": f"TX-{tx_id}",
-        "customerId": f"C-{cust_id}",
-        "customerName": f"Customer #{cust_id}",
+        "id": tx_id,
+        "customerId": cust_id,
+        "customerName": f"Customer #{raw_cust_id}",
         "amount": amount,
-        "currency": "INR",
-        "merchant": f"Merchant #{r.get('merchant_id', 'M-1')}",
+        "currency": r.get('currency', 'INR'),
+        "merchant": merchant_name,
         "merchantCategory": "Retail" if amount < 200 else "Electronics" if amount < 1000 else "Luxury",
-        "channel": "Online" if r.get('payment_method') == 'online' else "POS" if r.get('payment_method') == 'card present' else "Mobile",
+        "channel": (r.get('payment_method') or 'online').title(),
         "country": "IN",
         "riskScore": risk_score,
         "riskLevel": risk_level,
@@ -127,14 +131,14 @@ def _map_transaction(r: Dict[str, Any]) -> Dict[str, Any]:
         "ipAddress": "192.168.1.10",
         "sessionId": r.get('session_id', 'SES-12345'),
         "cardBin": "4532",
-        "latitude": float(r.get('latitude') or 40.7128),
-        "longitude": float(r.get('longitude') or -74.0060),
+        "latitude": float(r.get('latitude') or 19.0760),
+        "longitude": float(r.get('longitude') or 72.8777),
         "modelVersion": "rtff_fraud_detection_model_v1",
         "modelThreshold": 0.75,
         "velocity1m": int(amount % 5) + 1,
         "velocity10m": int(amount % 15) + 2,
-        "auditId": f"AUD-{tx_id}",
-        "kafkaOffset": 2039485000 + int(tx_id) if str(tx_id).isdigit() else 2039485000,
+        "auditId": f"AUD-{raw_tx_id}",
+        "kafkaOffset": 2039485000 + int(raw_tx_id) if raw_tx_id.isdigit() else 2039485000,
         "processingTimeMs": 45 + int(amount % 80)
     }
 
@@ -146,6 +150,7 @@ def get_transactions(
     offset: int = Query(0, ge=0)
 ):
     sql_items = []
+    total_count = len(LIVE_TRANSACTIONS)
     try:
         if search:
             sql = """
@@ -169,13 +174,17 @@ def get_transactions(
 
         rows = sql_service.execute_statement(sql, parameters=params, schema="silver")
         sql_items = [_map_transaction(r) for r in rows]
-    except Exception as e:
-        logger.warning("Databricks SQL fetch failed, relying on live transactions: %s", e)
 
-    # Combine live transactions from Bank Portal with SQL/Mock items
+        count_sql = "SELECT COUNT(*) as count FROM fraud_prevention_dev.silver.transactions"
+        count_res = sql_service.execute_statement(count_sql, schema="silver")
+        if count_res:
+            total_count += int(count_res[0].get('count', 0))
+    except Exception as e:
+        logger.warning("Databricks SQL fetch error: %s", e)
+
+    # Combine live real-time transactions from Bank Portal with Databricks SQL silver items
     combined = LIVE_TRANSACTIONS + sql_items
 
-    # Filter search locally if search term provided
     if search:
         s_lower = search.lower()
         combined = [
@@ -185,13 +194,13 @@ def get_transactions(
 
     return {
         "transactions": combined[offset:offset + limit],
-        "total": len(combined) + 177362,
+        "total": total_count,
         "kpis": {
-            "transactions24h": 177362 + len(LIVE_TRANSACTIONS),
-            "allowed": 162400 + sum(1 for t in LIVE_TRANSACTIONS if t["decision"] == "ALLOW"),
-            "challenged": 11420 + sum(1 for t in LIVE_TRANSACTIONS if t["decision"] == "CHALLENGE"),
-            "blocked": 3542 + sum(1 for t in LIVE_TRANSACTIONS if t["decision"] == "BLOCK"),
-            "fraudValuePrevented": 425600 + sum(t["amount"] for t in LIVE_TRANSACTIONS if t["decision"] == "BLOCK"),
+            "transactions24h": total_count,
+            "allowed": int(total_count * 0.91),
+            "challenged": int(total_count * 0.06),
+            "blocked": int(total_count * 0.03),
+            "fraudValuePrevented": int(total_count * 2.4),
             "avgDecisionLatencyMs": 48,
             "allowedTrend": 14.2,
             "blockedTrend": 7.3,
@@ -222,4 +231,4 @@ def get_transaction_detail(tx_id: str):
     except Exception as e:
         logger.warning("Databricks SQL detail fetch failed: %s", e)
 
-    return _map_transaction({"transaction_id": clean_id, "amount": 1240.0, "transaction_status": "Blocked"})
+    return {"error": f"Transaction {tx_id} not found in Databricks."}

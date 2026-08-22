@@ -1,16 +1,11 @@
 import { apiGet, apiPost } from './apiClient';
-import * as mockDashboard from '../mock/dashboard';
-import * as mockTransactions from '../mock/transactions';
-import * as mockRuleViolations from '../mock/ruleViolations';
-import * as mockHitl from '../mock/hitl';
-import * as mockAnalytics from '../mock/analytics';
 
 // Health Check API
 export async function fetchHealth() {
   try {
     return await apiGet<any>('/health');
   } catch (err) {
-    return { api: 'offline', databricks: 'offline', sql_warehouse: 'unknown', model_serving: 'unknown' };
+    return { api: 'offline', databricks: 'offline', sql_warehouse: 'unknown', model_serving: 'unknown', error: (err as Error).message };
   }
 }
 
@@ -20,13 +15,11 @@ export async function fetchDashboardData() {
     return await apiGet<any>('/dashboard');
   } catch (err) {
     return {
-      summary: mockDashboard.dashboardSummary,
-      transactionTrend: mockDashboard.transactionTrend,
-      decisionDistribution: mockDashboard.decisionDistribution,
-      topRuleViolations: mockDashboard.topRuleViolations,
-      systemHealth: mockDashboard.systemHealth,
-      alerts: mockDashboard.alerts,
-      recentActivity: mockDashboard.recentActivity
+      error: (err as Error).message,
+      databricksStatus: {
+        connected: false,
+        message: `Failed to connect to Databricks: ${(err as Error).message}`
+      }
     };
   }
 }
@@ -38,8 +31,10 @@ export async function fetchTransactionsData(search?: string, limit = 20, offset 
     return await apiGet<any>(`/transactions${query}`);
   } catch (err) {
     return {
-      transactions: mockTransactions.transactions,
-      kpis: mockTransactions.txKpis
+      transactions: [],
+      total: 0,
+      kpis: {},
+      error: (err as Error).message
     };
   }
 }
@@ -48,8 +43,12 @@ export async function fetchTransactionDetail(txId: string) {
   try {
     return await apiGet<any>(`/transactions/${txId}`);
   } catch (err) {
-    const tx = mockTransactions.transactions.find(t => t.id === txId) || mockTransactions.transactions[0];
-    return tx;
+    return {
+      error: `Failed to connect to Databricks: ${(err as Error).message}`,
+      id: txId,
+      amount: 0,
+      status: 'Unknown'
+    };
   }
 }
 
@@ -59,9 +58,9 @@ export async function fetchRuleViolationsData() {
     return await apiGet<any>('/rule-violations');
   } catch (err) {
     return {
-      ruleViolations: mockRuleViolations.ruleViolations,
-      kpis: mockRuleViolations.ruleViolationKpis,
-      violationsByCategory: mockRuleViolations.violationsByCategory
+      ruleViolations: [],
+      kpis: {},
+      error: (err as Error).message
     };
   }
 }
@@ -72,19 +71,15 @@ export async function fetchHitlQueueData() {
     return await apiGet<any>('/hitl');
   } catch (err) {
     return {
-      cases: mockHitl.hitlCases,
-      kpis: mockHitl.hitlKpis,
-      slaStatus: mockHitl.slaStatus
+      cases: [],
+      kpis: {},
+      error: (err as Error).message
     };
   }
 }
 
 export async function submitHitlDecision(caseId: string, decision: 'APPROVE' | 'BLOCK' | 'ESCALATE', reason?: string, analyst?: string) {
-  try {
-    return await apiPost<any>(`/hitl/${caseId}/decision`, { decision, reason, analyst });
-  } catch (err) {
-    return { status: 'mock_success', case_id: caseId, decision };
-  }
+  return await apiPost<any>(`/hitl/${caseId}/decision`, { decision, reason, analyst });
 }
 
 // Investigation API
@@ -92,23 +87,16 @@ export async function fetchInvestigationData(txId: string) {
   try {
     return await apiGet<any>(`/investigation/${txId}`);
   } catch (err) {
-    const tx = mockTransactions.transactions.find(t => t.id === txId) || mockTransactions.transactions[0];
     return {
-      transaction: tx,
-      customerContext: { avgAmount: 120, preferredMethod: 'online', historyDays: 180, totalTxCount: 42 },
-      deviceContext: { deviceId: tx.deviceId, isNewDevice: true, registeredDevices: 2, deviceRiskScore: 0.82 }
+      error: `Failed to connect to Databricks: ${(err as Error).message}`,
+      transaction: null
     };
   }
 }
 
 // Inference API (rtff-fraud-serving-dev)
 export async function scoreFraudTransaction(txData: { amount: number; payment_method?: string; customer_id?: string; merchant_id?: string; device_id?: string }) {
-  try {
-    return await apiPost<any>('/fraud/score', txData);
-  } catch (err) {
-    const prob = Math.min(0.99, (txData.amount / 3000.0));
-    return { status: 'fallback', fraudProbability: prob, decision: prob >= 0.75 ? 'BLOCK' : 'ALLOW' };
-  }
+  return await apiPost<any>('/fraud/score', txData);
 }
 
 // Analytics API
@@ -117,8 +105,9 @@ export async function fetchAnalyticsData() {
     return await apiGet<any>('/analytics');
   } catch (err) {
     return {
-      analyticsData: mockAnalytics.analyticsData,
-      decisionTrend: mockAnalytics.decisionTrend
+      analyticsData: [],
+      decisionTrend: [],
+      error: (err as Error).message
     };
   }
 }
@@ -129,22 +118,7 @@ export async function fetchModelInfo() {
     return await apiGet<any>('/model');
   } catch (err) {
     return {
-      modelName: 'RTFF Fraud Detection',
-      version: '1',
-      alias: 'champion',
-      prAuc: 0.947,
-      recall: 0.891,
-      fpr: 0.024,
-      precision: 0.873,
-      f1: 0.882,
-      threshold: 0.75,
-      status: 'ACTIVE'
+      error: (err as Error).message
     };
   }
 }
-
-export * from '../mock/dashboard';
-export * from '../mock/transactions';
-export * from '../mock/ruleViolations';
-export * from '../mock/hitl';
-export * from '../mock/analytics';
