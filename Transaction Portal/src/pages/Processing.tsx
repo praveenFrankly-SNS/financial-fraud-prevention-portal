@@ -193,36 +193,63 @@ export default function Processing() {
                 padding: 'var(--space-6) var(--space-4)',
                 textAlign: 'center',
               }}>
-                <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <style>{`
+                  @keyframes shieldSpin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                  @keyframes shieldSpinReverse {
+                    0% { transform: rotate(360deg); }
+                    100% { transform: rotate(0deg); }
+                  }
+                  @keyframes shieldPulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.08); opacity: 0.85; }
+                  }
+                  @keyframes glowPing {
+                    0% { transform: scale(0.9); opacity: 0.8; }
+                    70%, 100% { transform: scale(1.5); opacity: 0; }
+                  }
+                `}</style>
+                <div style={{ position: 'relative', width: 68, height: 68, margin: '0 auto var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{
                     position: 'absolute',
                     inset: -6,
                     borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, transparent 70%)',
-                    animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                    background: 'radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%)',
+                    animation: 'glowPing 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                  }} />
+                  <div style={{
+                    position: 'absolute',
+                    inset: -3,
+                    borderRadius: '50%',
+                    border: '2px dashed rgba(37, 99, 235, 0.4)',
+                    animation: 'shieldSpinReverse 10s linear infinite',
                   }} />
                   <div style={{
                     position: 'absolute',
                     inset: 0,
                     borderRadius: '50%',
-                    border: '3px solid transparent',
+                    border: '3.5px solid transparent',
                     borderTopColor: '#2563eb',
                     borderRightColor: '#7c3aed',
                     borderBottomColor: '#06b6d4',
-                    animation: 'spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite',
+                    animation: 'shieldSpin 0.9s linear infinite',
+                    boxShadow: '0 0 16px rgba(37, 99, 235, 0.35)',
                   }} />
                   <div style={{
-                    width: 36,
-                    height: 36,
+                    width: 38,
+                    height: 38,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                    background: 'linear-gradient(135deg, #1e293b, #0f172a)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.4)',
                     zIndex: 2,
+                    animation: 'shieldPulse 2s ease-in-out infinite',
                   }}>
-                    <ShieldCheck size={20} color="#ffffff" />
+                    <ShieldCheck size={20} color="#38bdf8" />
                   </div>
                 </div>
 

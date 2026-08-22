@@ -13,29 +13,49 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
 }) => {
   return (
     <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
-      {/* Central Modern Security Scan Animation */}
+      {/* Self-contained CSS keyframe animations for high-fps dynamic spinning */}
+      <style>{`
+        @keyframes shieldSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes shieldSpinReverse {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes shieldPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.08); opacity: 0.85; }
+        }
+        @keyframes glowPing {
+          0% { transform: scale(0.9); opacity: 0.8; }
+          70%, 100% { transform: scale(1.5); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Central High-Tech Security Scan Spinner */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 40 }}>
-        <div style={{ position: 'relative', width: 80, height: 80, marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', width: 84, height: 84, marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           
           {/* Outer glowing pulsing aura */}
           <div style={{
             position: 'absolute',
             inset: -8,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(124, 58, 237, 0.05) 70%, transparent 100%)',
-            animation: 'ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite',
+            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.3) 0%, rgba(124, 58, 237, 0.08) 60%, transparent 100%)',
+            animation: 'glowPing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite',
           }} />
 
           {/* Counter-rotating dashed outer ring */}
           <div style={{
             position: 'absolute',
-            inset: -4,
+            inset: -3,
             borderRadius: '50%',
-            border: '2px dashed rgba(37, 99, 235, 0.3)',
-            animation: 'spin 12s linear infinite reverse',
+            border: '2px dashed rgba(37, 99, 235, 0.4)',
+            animation: 'shieldSpinReverse 10s linear infinite',
           }} />
 
-          {/* Main gradient spinner ring */}
+          {/* Main gradient spinner ring - smooth 360deg spin */}
           <div style={{
             position: 'absolute',
             inset: 0,
@@ -44,21 +64,22 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
             borderTopColor: '#2563eb',
             borderRightColor: '#7c3aed',
             borderBottomColor: '#06b6d4',
-            animation: 'spin 1.1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite',
-            boxShadow: '0 0 24px rgba(37, 99, 235, 0.3)',
+            animation: 'shieldSpin 0.9s linear infinite',
+            boxShadow: '0 0 20px rgba(37, 99, 235, 0.35)',
           }} />
 
-          {/* Central Shield Icon with subtle pulse */}
+          {/* Central Shield Icon with subtle breathing pulse */}
           <div style={{
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #1e293b, #0f172a)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.4), inset 0 1px 1px rgba(255,255,255,0.15)',
+            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.45), inset 0 1px 1px rgba(255,255,255,0.2)',
             zIndex: 2,
+            animation: 'shieldPulse 2s ease-in-out infinite',
           }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#38bdf8' }}>
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -78,7 +99,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
             background: '#10b981',
             display: 'inline-block',
             boxShadow: '0 0 10px #10b981',
-            animation: 'pulse 1.5s ease-in-out infinite',
+            animation: 'shieldPulse 1.5s ease-in-out infinite',
           }} />
           <span>{submessage}</span>
         </div>
