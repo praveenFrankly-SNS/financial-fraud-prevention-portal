@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Cpu } from 'lucide-react';
+import { ArrowLeft, Cpu, Shield, User, Clock, FileText, Activity, MessageSquare } from 'lucide-react';
 import { fetchInvestigationData, submitHitlDecision, scoreFraudTransaction } from '../../services';
 import { LoadingState } from '../../components/LoadingState';
 
@@ -36,6 +36,11 @@ export function Investigation() {
   
   const [decision, setDecision] = useState<'APPROVE' | 'BLOCK' | 'ESCALATE' | null>(null);
   const [notes, setNotes] = useState('High fraud score with multiple risk factors matched.');
+  const [analystNotesList, setAnalystNotesList] = useState<Array<{ author: string; time: string; text: string }>>([
+    { author: 'System Automated Rule', time: 'Just now', text: 'Transaction routed to HITL queue due to Model Serving score threshold.' },
+    { author: 'Senior Fraud Analyst', time: '2m ago', text: 'Checking IP geolocation distance and velocity signals.' }
+  ]);
+  const [newNote, setNewNote] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [auditId, setAuditId] = useState<string | null>(null);
 
@@ -46,7 +51,7 @@ export function Investigation() {
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetchInvestigationData(txId || 'TX-5843');
+        const res = await fetchInvestigationData(txId || 'TXN-0');
         setData(res);
       } catch (err) {
         console.error('Error fetching investigation:', err);
@@ -88,25 +93,30 @@ export function Investigation() {
       setAuditId(res.audit_id || `AUD-${tx.id}`);
       setSubmitted(true);
       
-      // Update displayed transaction state
       const newDec = decision === 'APPROVE' ? 'ALLOW' : decision === 'BLOCK' ? 'BLOCK' : 'CHALLENGE';
       const newStatus = decision === 'APPROVE' ? 'Approved' : decision === 'BLOCK' ? 'Declined' : 'Pending';
-      const newScore = decision === 'APPROVE' ? 0.05 : decision === 'BLOCK' ? 0.99 : tx.riskScore;
-      const newLevel = decision === 'APPROVE' ? 'Low' : decision === 'BLOCK' ? 'High' : tx.riskLevel;
 
       setData((prev: any) => ({
         ...prev,
         transaction: {
           ...prev.transaction,
           decision: newDec,
-          status: newStatus,
-          riskScore: newScore,
-          riskLevel: newLevel
+          status: newStatus
+          // Preserving the evaluated Databricks model riskScore
         }
       }));
     } catch (err) {
       console.error('Error submitting decision:', err);
     }
+  };
+
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    setAnalystNotesList(prev => [
+      ...prev,
+      { author: 'Fraud Analyst (You)', time: 'Just now', text: newNote.trim() }
+    ]);
+    setNewNote('');
   };
 
   if (loading && !data) {
@@ -210,9 +220,9 @@ export function Investigation() {
         ))}
       </div>
 
+      {/* TAB 1: Case Overview */}
       {activeTab === 'Case Overview' && (
         <div>
-          {/* 3+1 Grid */}
           <div className="investigation-layout" style={{ marginBottom: 20 }}>
             {/* Transaction Context */}
             <div className="card">
@@ -254,8 +264,8 @@ export function Investigation() {
                 {[
                   ['Risk Level', tx.riskLevel], ['Model Version', tx.modelVersion],
                   ['Model Threshold', (tx.modelThreshold || 0.75).toString()],
-                  ['Velocity (1 min)', `${tx.velocity1m || 3} transactions`],
-                  ['Velocity (10 min)', `${tx.velocity10m || 8} transactions`],
+                  ['Velocity (1 min)', `${tx.velocity1m || 1} transactions`],
+                  ['Velocity (10 min)', `${tx.velocity10m || 2} transactions`],
                 ].map(([l, v]) => (
                   <div className="detail-row" key={l as string}>
                     <span className="detail-label">{l}</span>
@@ -286,18 +296,22 @@ export function Investigation() {
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
                 Triggered Rules ({(tx.rulesTriggered || []).length})
               </div>
-              {(tx.rulesTriggered || []).map((r: string) => {
-                const detail = ruleDetails[r] ?? { severity: 'MEDIUM', desc: 'Rule triggered.' };
-                return (
-                  <div key={r} style={{ padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{r}</span>
-                      <SeverityBadge s={detail.severity} />
+              {(tx.rulesTriggered || []).length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>No static rules triggered.</div>
+              ) : (
+                (tx.rulesTriggered || []).map((r: string) => {
+                  const detail = ruleDetails[r] ?? { severity: 'MEDIUM', desc: 'Rule triggered.' };
+                  return (
+                    <div key={r} style={{ padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{r}</span>
+                        <SeverityBadge s={detail.severity} />
+                      </div>
+                      <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0 }}>{detail.desc}</p>
                     </div>
-                    <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0 }}>{detail.desc}</p>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             {/* Decision Panel */}
@@ -345,6 +359,203 @@ export function Investigation() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 2: Evidence */}
+      {activeTab === 'Evidence' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+          <div className="card">
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>📡 Network & Geolocation Telemetry</h4>
+            <div className="detail-grid">
+              {[
+                ['IP Address', tx.ipAddress || '203.0.113.45'],
+                ['ISP / ASN', 'Reliance Jio / AS55836'],
+                ['City / Country', `${tx.country || 'IN'} (Lat: ${tx.latitude || 19.07}, Lon: ${tx.longitude || 72.87})`],
+                ['Proxy / VPN Status', 'Clean (No Anonymizer)'],
+                ['Distance from Home', '12.4 km']
+              ].map(([k, v]) => (
+                <div key={k} className="detail-row">
+                  <span className="detail-label">{k}</span>
+                  <span className="detail-value">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>📱 Device Hardware Fingerprint</h4>
+            <div className="detail-grid">
+              {[
+                ['Device ID', tx.deviceId || 'DEV-CHROME-WIN'],
+                ['User Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'],
+                ['Screen Resolution', '1920x1080 (60Hz)'],
+                ['Canvas Hash Match', '0x9FA812C4 (Verified)'],
+                ['Registered Devices', '2 Devices on Account']
+              ].map(([k, v]) => (
+                <div key={k} className="detail-row">
+                  <span className="detail-label">{k}</span>
+                  <span className="detail-value">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Customer Profile */}
+      {activeTab === 'Customer Profile' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+          <div className="card">
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>👤 Customer 360 Overview</h4>
+            <div className="detail-grid">
+              {[
+                ['Customer ID', tx.customerId || 'CUST-1001'],
+                ['Full Name', tx.customerName || 'Praveen Kumar'],
+                ['Account Status', 'Active (KYC Verified)'],
+                ['Tenure', '180 Days'],
+                ['Risk Tier', 'Medium Risk']
+              ].map(([k, v]) => (
+                <div key={k} className="detail-row">
+                  <span className="detail-label">{k}</span>
+                  <span className="detail-value">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>📊 30-Day Spending Baseline</h4>
+            <div className="detail-grid">
+              {[
+                ['Avg 30-Day Amount', '₹2,500.00'],
+                ['Max Single Transaction', '₹50,000.00'],
+                ['Total 30-Day Txns', '42 Transactions'],
+                ['Preferred Channel', tx.channel || 'UPI']
+              ].map(([k, v]) => (
+                <div key={k} className="detail-row">
+                  <span className="detail-label">{k}</span>
+                  <span className="detail-value">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: Transaction History */}
+      {activeTab === 'Transaction History' && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Merchant</th>
+                <th>Amount</th>
+                <th>Risk Score</th>
+                <th>Decision</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ fontWeight: 600 }}>{tx.id}</td>
+                <td>{tx.merchant}</td>
+                <td style={{ fontWeight: 600 }}>₹{tx.amount?.toLocaleString()}</td>
+                <td style={{ fontWeight: 700, color: 'var(--color-amber)' }}>{tx.riskScore?.toFixed(2)}</td>
+                <td><span className="badge badge-medium">{tx.decision || 'CHALLENGE'}</span></td>
+                <td>{tx.status || 'Pending'}</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600 }}>TXN-115C70B8</td>
+                <td>BookMyShow</td>
+                <td style={{ fontWeight: 600 }}>₹1,000.00</td>
+                <td style={{ fontWeight: 700, color: 'var(--color-green)' }}>0.09</td>
+                <td><span className="badge badge-low">ALLOW</span></td>
+                <td>Completed</td>
+              </tr>
+              <tr>
+                <td style={{ fontWeight: 600 }}>TXN-CFBA0DOC</td>
+                <td>Blinkit</td>
+                <td style={{ fontWeight: 600 }}>₹5,500.00</td>
+                <td style={{ fontWeight: 700, color: 'var(--color-green)' }}>0.05</td>
+                <td><span className="badge badge-low">ALLOW</span></td>
+                <td>Completed</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* TAB 5: Notes & Comments */}
+      {activeTab === 'Notes & Comments' && (
+        <div className="card">
+          <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>💬 Analyst Case Notes & Collaboration</h4>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            {analystNotesList.map((n, idx) => (
+              <div key={idx} style={{ padding: 12, background: 'var(--color-bg-secondary)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
+                  <strong style={{ color: 'var(--color-brand-primary)' }}>{n.author}</strong>
+                  <span style={{ color: 'var(--color-text-muted)' }}>{n.time}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-primary)' }}>{n.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Add internal analyst note or comment..."
+              value={newNote}
+              onChange={e => setNewNote(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddNote()}
+              style={{ flex: 1, padding: '8px 12px', fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 6 }}
+            />
+            <button className="btn btn-primary" onClick={handleAddNote}>
+              Post Note
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: Audit Log */}
+      {activeTab === 'Audit Log' && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Event ID</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Model Risk Score</th>
+                <th>Audit Hash</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {submitted && auditId && (
+                <tr>
+                  <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{auditId}</td>
+                  <td style={{ fontWeight: 600 }}>Analyst (You)</td>
+                  <td><span className="badge badge-low">HITL_{decision}</span></td>
+                  <td style={{ fontWeight: 700 }}>{tx.riskScore?.toFixed(2)}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 11 }}>0x89F4A...DB</td>
+                  <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Just now</td>
+                </tr>
+              )}
+              <tr>
+                <td style={{ fontFamily: 'monospace', fontSize: 12 }}>AUD-EVAL-9012</td>
+                <td style={{ fontWeight: 600 }}>rtff-fraud-serving-dev</td>
+                <td><span className="badge badge-medium">MODEL_EVALUATION</span></td>
+                <td style={{ fontWeight: 700, color: 'var(--color-amber)' }}>{tx.riskScore?.toFixed(2)}</td>
+                <td style={{ fontFamily: 'monospace', fontSize: 11 }}>0x12A4B...99</td>
+                <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{tx.timestamp}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       )}
     </div>

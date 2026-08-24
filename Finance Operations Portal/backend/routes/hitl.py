@@ -126,12 +126,8 @@ def submit_hitl_decision(case_id: str, body: DecisionRequest):
         if t["id"] == clean_id or t_clean == clean_id:
             t["decision"] = new_dec
             t["status"] = new_status
-            if body.decision.upper() == "APPROVE":
-                t["riskScore"] = 0.05
-                t["riskLevel"] = "Low"
-            elif body.decision.upper() == "BLOCK":
-                t["riskScore"] = 0.99
-                t["riskLevel"] = "High"
+            t["analystDecision"] = body.decision.upper()
+            t["analystNotes"] = body.reason
 
     result = fraud_ops_service.record_hitl_decision(
         case_id=case_id,

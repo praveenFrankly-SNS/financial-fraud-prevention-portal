@@ -5,6 +5,8 @@ import MakePayment    from './pages/MakePayment';
 import Processing     from './pages/Processing';
 import Transactions   from './pages/Transactions';
 import SimulationMode from './pages/SimulationMode';
+import HelpSupport    from './pages/HelpSupport';
+import Settings       from './pages/Settings';
 
 export default function App() {
   return (
@@ -15,12 +17,9 @@ export default function App() {
         <Route path="/processing"  element={<Processing />} />
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/simulation"  element={<SimulationMode />} />
-
-        {/* Placeholder routes — sidebar links that aren't built yet */}
-        <Route path="/send"          element={<MakePayment />} />
-        <Route path="/beneficiaries" element={<Home />} />
-        <Route path="/help"          element={<Home />} />
-        <Route path="/settings"      element={<Home />} />
+        <Route path="/send"        element={<MakePayment />} />
+        <Route path="/help"        element={<HelpSupport />} />
+        <Route path="/settings"    element={<Settings />} />
       </Routes>
     </BrowserRouter>
   );
