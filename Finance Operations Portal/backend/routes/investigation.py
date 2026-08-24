@@ -2,19 +2,22 @@ from fastapi import APIRouter
 from typing import Dict, Any
 import logging
 from ..services.databricks_sql import sql_service
-from .transactions import LIVE_TRANSACTIONS, _map_transaction
+from . import transactions
 
 logger = logging.getLogger("investigation_route")
 router = APIRouter()
 
 @router.get("/investigation/{tx_id}")
 def get_investigation_details(tx_id: str):
-    clean_target = tx_id.replace("CASE-2026-", "").replace("TX-", "").replace("TXN-", "").replace("SIM-", "")
+    target = tx_id.upper()
+    clean_target = target.replace("CASE-2026-", "").replace("TX-", "").replace("TXN-", "").replace("SIM-", "")
 
-    # 1. Check live transactions first (from Bank Portal / Simulation)
-    for t in LIVE_TRANSACTIONS:
-        t_clean = t["id"].replace("CASE-2026-", "").replace("TX-", "").replace("TXN-", "").replace("SIM-", "")
-        if t["id"] == tx_id or t_clean == clean_target:
+    # 1. Check live transactions first (dynamically accessing transactions.LIVE_TRANSACTIONS)
+    for t in transactions.LIVE_TRANSACTIONS:
+        t_id = t["id"].upper()
+        t_clean = t_id.replace("CASE-2026-", "").replace("TX-", "").replace("TXN-", "").replace("SIM-", "")
+        
+        if t_id == target or t_clean == clean_target or t_id.endswith(clean_target):
             rules = t.get("rulesTriggered") or []
             return {
                 "transaction": t,
@@ -26,7 +29,7 @@ def get_investigation_details(tx_id: str):
                 },
                 "deviceContext": {
                     "deviceId": t.get("deviceId", "DEV-CHROME-WIN"),
-                    "isNewDevice": True if ("New device detected" in rules or "New Device" in rules) else False,
+                    "isNewDevice": True if ("New device detected" in rules or "New Device" in rules or "Unusual device" in rules) else False,
                     "registeredDevices": 2,
                     "deviceRiskScore": round(t.get("riskScore", 0.5), 2)
                 }
@@ -53,7 +56,7 @@ def get_investigation_details(tx_id: str):
         
         if rows:
             row = rows[0]
-            mapped_tx = _map_transaction(row)
+            mapped_tx = transactions._map_transaction(row)
             return {
                 "transaction": mapped_tx,
                 "customerContext": {

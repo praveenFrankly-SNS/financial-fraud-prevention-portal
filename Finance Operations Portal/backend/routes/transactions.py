@@ -70,9 +70,13 @@ def record_live_transaction(payload: RecordTransactionPayload):
         "processingTimeMs": 42
     }
 
-    # Avoid duplicate IDs
-    global LIVE_TRANSACTIONS
-    LIVE_TRANSACTIONS = [t for t in LIVE_TRANSACTIONS if t["id"] != record["id"]]
+    # Avoid duplicate IDs by mutating in place
+    i = 0
+    while i < len(LIVE_TRANSACTIONS):
+        if LIVE_TRANSACTIONS[i]["id"] == record["id"]:
+            LIVE_TRANSACTIONS.pop(i)
+        else:
+            i += 1
     LIVE_TRANSACTIONS.insert(0, record)
 
     logger.info("Recorded live transaction in Finance Ops Portal: %s | ₹%.2f | %s", record["id"], payload.amount, payload.decision)

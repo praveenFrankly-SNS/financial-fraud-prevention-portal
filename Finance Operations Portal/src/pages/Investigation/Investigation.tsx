@@ -113,8 +113,25 @@ export function Investigation() {
     return <LoadingState message="Loading Case Investigation Details..." submessage="Fetching transaction context, customer profile & device risk drivers..." />;
   }
 
-  const tx = data?.transaction || {};
-  const caseId = `CASE-2026-${tx.id?.replace('TX-', '') || '5843'}`;
+  const tx = data?.transaction || null;
+  const currentTxId = txId || 'TXN-0';
+  const cleanId = currentTxId.replace('CASE-2026-', '').replace('TX-', '');
+  const caseId = currentTxId.startsWith('CASE-') ? currentTxId : `CASE-2026-${cleanId}`;
+
+  if (!loading && (!tx || data?.error)) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Transaction Not Found</h2>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 20 }}>
+          {data?.error || `Transaction ID "${currentTxId}" was not found in Databricks SQL or live session memory.`}
+        </p>
+        <button className="btn btn-primary" onClick={() => navigate('/transactions')}>
+          <ArrowLeft size={14} style={{ marginRight: 6 }} /> Back to Transactions
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
