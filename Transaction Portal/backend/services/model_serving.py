@@ -72,38 +72,59 @@ class ModelServingService:
     def build_features(
         self,
         amount: float,
-        velocity_5m: int,
-        velocity_10m: int,
-        is_new_device: bool,
-        is_new_location: bool,
-        is_new_merchant: bool,
-        impossible_travel: bool,
+        velocity_5m: int = 1,
+        velocity_10m: int = 2,
+        is_new_device: bool = False,
+        is_new_location: bool = False,
+        is_new_merchant: bool = False,
+        impossible_travel: bool = False,
+        high_risk_category: bool = False,
+        past_fraud_history: bool = False,
         customer_avg: Optional[float] = None,
     ) -> Dict[str, float]:
         record: Dict[str, float] = {col: 0.0 for col in FEATURE_COLUMNS}
         record['transaction_amount'] = float(amount)
 
-        if customer_avg is not None and customer_avg > 0:
-            record['customer_avg_amount_30d'] = float(customer_avg)
-            record['amount_vs_customer_avg'] = float(amount) / customer_avg
-            record['amount_zscore'] = max(0.0, (float(amount) - customer_avg) / max(customer_avg * 0.5, 1.0))
-        else:
-            record['customer_avg_amount_30d'] = 0.0
-            record['amount_vs_customer_avg'] = 1.0
-            record['amount_zscore'] = 0.0
+        base_avg = customer_avg if (customer_avg is not None and customer_avg > 0) else 2500.0
+        record['customer_avg_amount_30d'] = float(base_avg)
+        record['amount_vs_customer_avg'] = float(amount) / base_avg
+        record['amount_zscore'] = max(0.0, (float(amount) - base_avg) / max(base_avg * 0.5, 1.0))
 
-        record['txn_count_5m'] = float(velocity_5m)
-        record['txn_count_10m'] = float(velocity_10m)
+        v5m = float(velocity_5m)
+        v10m = float(velocity_10m)
+        record['txn_count_5m'] = v5m
+        record['txn_count_10m'] = v10m
+        record['txn_count_1h'] = v5m * 3.0
+        record['txn_count_24h'] = v5m * 8.0
+        record['amount_sum_5m'] = float(amount) * v5m
+        record['amount_sum_1h'] = float(amount) * v5m * 2.0
+        record['amount_sum_24h'] = float(amount) * v5m * 4.0
+
         record['is_new_device'] = 1.0 if is_new_device else 0.0
         record['is_known_customer_device'] = 0.0 if is_new_device else 1.0
+        record['device_change_last_24h'] = 1.0 if is_new_device else 0.0
+        record['device_age_days'] = 1.0 if is_new_device else 180.0
+
         record['is_new_location'] = 1.0 if is_new_location else 0.0
-        record['is_new_merchant'] = 1.0 if is_new_merchant else 0.0
+        record['is_new_country'] = 1.0 if (is_new_location or impossible_travel) else 0.0
+        record['distance_from_previous_location_km'] = 8500.0 if impossible_travel else (450.0 if is_new_location else 5.0)
+        record['travel_speed_kmh'] = 1200.0 if impossible_travel else 15.0
         record['impossible_travel'] = 1.0 if impossible_travel else 0.0
+
+        record['is_new_merchant'] = 1.0 if is_new_merchant else 0.0
+        record['is_new_merchant_category'] = 1.0 if high_risk_category else 0.0
+        record['merchant_prior_fraud_rate'] = 0.85 if (high_risk_category or past_fraud_history) else 0.02
+        record['failed_login_count_5m'] = 4.0 if past_fraud_history else 0.0
+        record['account_security_event_count_1h'] = 3.0 if past_fraud_history else 0.0
+
+        # Interaction terms
         record['new_device_and_large_amount'] = 1.0 if (is_new_device and amount > 10000) else 0.0
         record['new_device_and_new_location'] = 1.0 if (is_new_device and is_new_location) else 0.0
         record['impossible_travel_and_new_device'] = 1.0 if (impossible_travel and is_new_device) else 0.0
-        record['high_velocity_and_new_device'] = 1.0 if (velocity_5m > 3 and is_new_device) else 0.0
-        record['high_velocity_and_new_merchant'] = 1.0 if (velocity_5m > 3 and is_new_merchant) else 0.0
+        record['high_velocity_and_new_device'] = 1.0 if (v5m > 3 and is_new_device) else 0.0
+        record['high_velocity_and_new_merchant'] = 1.0 if (v5m > 3 and is_new_merchant) else 0.0
+        record['recent_password_change_and_transaction'] = 1.0 if past_fraud_history else 0.0
+
         return record
 
     def score_and_decide(

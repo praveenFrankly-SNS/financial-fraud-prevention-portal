@@ -85,8 +85,25 @@ export function Investigation() {
         notes,
         "analyst@financeops.com"
       );
-      setAuditId(res.audit_id || 'AUD-OK');
+      setAuditId(res.audit_id || `AUD-${tx.id}`);
       setSubmitted(true);
+      
+      // Update displayed transaction state
+      const newDec = decision === 'APPROVE' ? 'ALLOW' : decision === 'BLOCK' ? 'BLOCK' : 'CHALLENGE';
+      const newStatus = decision === 'APPROVE' ? 'Approved' : decision === 'BLOCK' ? 'Declined' : 'Pending';
+      const newScore = decision === 'APPROVE' ? 0.05 : decision === 'BLOCK' ? 0.99 : tx.riskScore;
+      const newLevel = decision === 'APPROVE' ? 'Low' : decision === 'BLOCK' ? 'High' : tx.riskLevel;
+
+      setData((prev: any) => ({
+        ...prev,
+        transaction: {
+          ...prev.transaction,
+          decision: newDec,
+          status: newStatus,
+          riskScore: newScore,
+          riskLevel: newLevel
+        }
+      }));
     } catch (err) {
       console.error('Error submitting decision:', err);
     }

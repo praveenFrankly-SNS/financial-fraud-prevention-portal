@@ -48,14 +48,19 @@ def run_simulation(body: SimulationRequest):
     """
     transaction_id = f"SIM-{uuid.uuid4().hex[:8].upper()}"
 
+    v5m = body.velocity_5m or (12 if body.multiple_rapid_txns else 1)
+    v10m = body.velocity_10m or (24 if body.multiple_rapid_txns else 2)
+
     features = model_service.build_features(
         amount            = body.amount,
-        velocity_5m       = body.velocity_5m or 1,
-        velocity_10m      = body.velocity_10m or 2,
+        velocity_5m       = v5m,
+        velocity_10m      = v10m,
         is_new_device     = body.is_new_device or False,
         is_new_location   = body.is_new_location or False,
         is_new_merchant   = body.is_new_merchant or False,
         impossible_travel = body.impossible_travel or False,
+        high_risk_category = body.high_risk_category or False,
+        past_fraud_history = body.past_fraud_history or False,
     )
     result = model_service.score_and_decide(features)
 
